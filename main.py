@@ -10,13 +10,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
+import sys
+sys.path.append("..")
+import stage_follower.stage_follower_env_play
 
 from arguments import get_args
-from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
+# from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from baselines.common.vec_env.vec_normalize import VecNormalize
 from envs import make_env
-from kfac import KFACOptimizer
+# from kfac import KFACOptimizer
 from model import CNNPolicy, MLPPolicy
 from storage import RolloutStorage
 from visualize import visdom_plot
@@ -56,6 +59,11 @@ def main():
 
     envs = [make_env(args.env_name, args.seed, i, args.log_dir)
                 for i in range(args.num_processes)]
+    #
+    if args.env_name == "Stage-Follower-v0":
+        for env in envs:
+            env().env.initROS()
+
 
     if args.num_processes > 1:
         envs = SubprocVecEnv(envs)
@@ -66,11 +74,17 @@ def main():
         envs = VecNormalize(envs)
 
     obs_shape = envs.observation_space.shape
-    obs_shape = (obs_shape[0] * args.num_stack, *obs_shape[1:])
+    obs_shape = list(obs_shape)
+    obs_shape[0] = obs_shape[0] * args.num_stack
+    obs_shape = tuple(obs_shape)
+    # obs_shape = (obs_shape[0] * args.num_stack, *obs_shape[1:])
 
     if len(envs.observation_space.shape) == 3:
+        print ("in if")
         actor_critic = CNNPolicy(obs_shape[0], envs.action_space, args.recurrent_policy)
     else:
+        print ("in else")
+
         assert not args.recurrent_policy, \
             "Recurrent policy is not implemented for the MLP controller"
         actor_critic = MLPPolicy(obs_shape[0], envs.action_space)
@@ -82,13 +96,14 @@ def main():
 
     if args.cuda:
         actor_critic.cuda()
+    print ("cuda %r" % args.cuda)
 
     if args.algo == 'a2c':
         optimizer = optim.RMSprop(actor_critic.parameters(), args.lr, eps=args.eps, alpha=args.alpha)
     elif args.algo == 'ppo':
         optimizer = optim.Adam(actor_critic.parameters(), args.lr, eps=args.eps)
-    elif args.algo == 'acktr':
-        optimizer = KFACOptimizer(actor_critic)
+    # elif args.algo == 'acktr':
+    #     optimizer = KFACOptimizer(actor_critic)
 
     rollouts = RolloutStorage(args.num_steps, args.num_processes, obs_shape, envs.action_space, actor_critic.state_size)
     current_obs = torch.zeros(args.num_processes, *obs_shape)
@@ -254,10 +269,12 @@ def main():
                        final_rewards.min(),
                        final_rewards.max(), dist_entropy.data[0],
                        value_loss.data[0], action_loss.data[0]))
+
         if args.vis and j % args.vis_interval == 0:
             try:
                 # Sometimes monitor doesn't properly flush the outputs
                 win = visdom_plot(viz, win, args.log_dir, args.env_name, args.algo)
+                print ("finished viz !!!!!!!!!!!!!!!!!")
             except IOError:
                 pass
 

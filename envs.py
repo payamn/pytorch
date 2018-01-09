@@ -16,6 +16,7 @@ except ImportError:
 def make_env(env_id, seed, rank, log_dir):
     def _thunk():
         env = gym.make(env_id)
+        print (env)
         is_atari = hasattr(gym.envs, 'atari') and isinstance(env.unwrapped, gym.envs.atari.atari_env.AtariEnv)
         if is_atari:
             env = make_atari(env_id)
@@ -25,6 +26,7 @@ def make_env(env_id, seed, rank, log_dir):
         if is_atari:
             env = wrap_deepmind(env)
         # If the input has shape (W,H,3), wrap for PyTorch convolutions
+        print  env.observation_space
         obs_shape = env.observation_space.shape
         if len(obs_shape) == 3 and obs_shape[2] in [1, 3]:
             env = WrapPyTorch(env)
