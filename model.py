@@ -178,5 +178,4 @@ class MLPPolicy(FFPolicy):
 
         x = self.a_fc2(x)
         x = F.tanh(x)
-
         return value, x, states

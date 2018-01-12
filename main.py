@@ -60,9 +60,9 @@ def main():
     envs = [make_env(args.env_name, args.seed, i, args.log_dir)
                 for i in range(args.num_processes)]
     #
-    if args.env_name == "Stage-Follower-v0":
-        for env in envs:
-            env().env.initROS()
+    # if args.env_name == "Stage-Follower-v0":
+    #     for i, env in enumerate(envs):
+    #         env().env.initROS(i)
 
 
     if args.num_processes > 1:
@@ -78,8 +78,11 @@ def main():
     obs_shape[0] = obs_shape[0] * args.num_stack
     obs_shape = tuple(obs_shape)
     # obs_shape = (obs_shape[0] * args.num_stack, *obs_shape[1:])
-
-    if len(envs.observation_space.shape) == 3:
+    if (args.load_model):
+        actor_critic, ob_rms = \
+            torch.load(os.path.join(args.load_dir, args.env_name + ".pt"))
+        print ("model loaded")
+    elif len(envs.observation_space.shape) == 3:
         print ("in if")
         actor_critic = CNNPolicy(obs_shape[0], envs.action_space, args.recurrent_policy)
     else:
@@ -114,8 +117,11 @@ def main():
         if args.num_stack > 1:
             current_obs[:, :-shape_dim0] = current_obs[:, shape_dim0:]
         current_obs[:, -shape_dim0:] = obs
+    print ("reset env")
 
     obs = envs.reset()
+    print ("update obs ")
+
     update_current_obs(obs)
 
     rollouts.observations[0].copy_(current_obs)
@@ -127,7 +133,7 @@ def main():
     if args.cuda:
         current_obs = current_obs.cuda()
         rollouts.cuda()
-
+    print ("before step")
     start = time.time()
     for j in range(num_updates):
         for step in range(args.num_steps):

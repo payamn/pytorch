@@ -47,8 +47,12 @@ def get_args():
                         help='vis interval, one log per n updates (default: 100)')
     parser.add_argument('--num-frames', type=int, default=10e6,
                         help='number of frames to train (default: 10e6)')
+    parser.add_argument('--load-model', type=bool, default=True,
+                        help='load model from disk (default: True)')
     parser.add_argument('--env-name', default='Stage-Follower-v0',
                         help='environment to train on (default: Stage-Follower-v0)')
+    parser.add_argument('--load-dir', default='/local_home/ros_workspace/src/FollowRL/pytorch/trained_models/a2c/',
+                        help='directory to save agent logs (default: ./trained_models/)')
     parser.add_argument('--log-dir', default='/tmp/gym/',
                         help='directory to save agent logs (default: /tmp/gym)')
     parser.add_argument('--save-dir', default='./trained_models/',
